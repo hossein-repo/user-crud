@@ -1,62 +1,53 @@
 package usecase
 
 import (
-    "errors"
-    "regexp"
-    "user-crud/model"
-    "user-crud/repository"
+	"errors"
+	"time"
+	"user-crud/infra/db"
+	"user-crud/model"
 
-    "golang.org/x/crypto/bcrypt"
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
-// ----------- Helpers -----------
-
-func validateEmail(email string) bool {
-    re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
-    return re.MatchString(email)
-}
-
-func validatePassword(password string) bool {
-    return len(password) >= 6 // فقط طول ۶ کاراکتر برای شروع
-}
-
-// ----------- UseCases -----------
-
 func RegisterUser(username, email, password string) error {
-    if username == "" {
-        return errors.New("username is required")
-    }
-    if !validateEmail(email) {
-        return errors.New("invalid email format")
-    }
-    if !validatePassword(password) {
-        return errors.New("password must be at least 6 characters")
+    var user model.User
+    if err := db.DB.Where("username = ?", username).Or("email = ?", email).First(&user).Error; err == nil {
+        return errors.New("username or email already exists")
     }
 
-    // هش کردن پسورد
-    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-    if err != nil {
-        return errors.New("could not hash password")
-    }
-
-    user := model.User{
+    hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+    newUser := model.User{
         Username: username,
         Email:    email,
-        Password: string(hashedPassword),
+        Password: string(hashed),
+        Enabled:  true,
+        CreatedBy: 0, // admin یا سیستم
     }
-    return repository.CreateUser(user)
+
+    return db.DB.Create(&newUser).Error
 }
 
-func LoginUser(username, password string) (model.User, error) {
-    u, err := repository.GetUser(username)
-    if err != nil {
-        return u, err
+func LoginUser(username, password string) (string, error) {
+    var user model.User
+    if err := db.DB.Where("username = ?", username).First(&user).Error; err != nil {
+        return "", errors.New("user not found")
     }
 
-    // بررسی صحت پسورد
-    err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-    if err != nil {
-        return model.User{}, errors.New("invalid password")
+    if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+        return "", errors.New("invalid password")
     }
-    return u, nil
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+        "user_id":  user.ID,
+        "username": user.Username,
+        "exp":      time.Now().Add(time.Hour * 24).Unix(),
+    })
+
+    tokenString, err := token.SignedString(jwtKey)
+    if err != nil {
+        return "", err
+    }
+
+    return tokenString, nil
 }
