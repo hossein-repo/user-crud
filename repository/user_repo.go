@@ -1,24 +1,47 @@
 package repository
 
 import (
-    "errors"
-    "user-crud/model"
+	"errors"
+	"user-crud/infra/db"
+	"user-crud/model"
+
+	"gorm.io/gorm"
 )
 
-var users = map[string]model.User{}
-
-func CreateUser(u model.User) error {
-    if _, exists := users[u.Username]; exists {
-        return errors.New("username already exists")
-    }
-    users[u.Username] = u
-    return nil
+type UserRepository interface {
+	Create(user *model.User) error
+	GetByUsername(username string) (*model.User, error)
+	GetByID(id uint) (*model.User, error)
 }
 
-func GetUser(username string) (model.User, error) {
-    u, exists := users[username]
-    if !exists {
-        return model.User{}, errors.New("user not found")
-    }
-    return u, nil
+type userRepository struct{}
+
+func NewUserRepository() UserRepository {
+	return &userRepository{}
+}
+
+func (r *userRepository) Create(user *model.User) error {
+	return db.DB.Create(user).Error
+}
+
+func (r *userRepository) GetByUsername(username string) (*model.User, error) {
+	var user model.User
+	if err := db.DB.Preload("UserRoles").Where("username = ?", username).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) GetByID(id uint) (*model.User, error) {
+	var user model.User
+	if err := db.DB.Preload("UserRoles").First(&user, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+	return &user, nil
 }

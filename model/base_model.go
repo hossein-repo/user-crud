@@ -1,3 +1,4 @@
+// D:\Programing\projects\user-crud\model\base_model.go
 package model
 
 import (
@@ -18,7 +19,7 @@ type BaseModel struct {
 // BeforeCreate hook برای تمام مدل‌ها
 func (b *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
 	if b.CreatedBy == 0 {
-		b.CreatedBy = 1 // یا هر ID پیش‌فرض دیگری که مدنظر است
+		b.CreatedBy = 1
 	}
 	if b.UpdatedBy == 0 {
 		b.UpdatedBy = 1
@@ -28,7 +29,6 @@ func (b *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
 
 // BeforeUpdate hook برای به‌روزرسانی UpdatedBy
 func (b *BaseModel) BeforeUpdate(tx *gorm.DB) (err error) {
-	// اگر میخوای می‌تونی اینجا هم مقدار UpdatedBy را خودکار تغییر بدی
-	// b.UpdatedBy = currentUserID (مثلاً از context)
+	// می‌تونیم UpdatedBy رو از context یا مقدار دلخواه بگیریم
 	return
 }

@@ -3,29 +3,31 @@ package middleware
 import (
 	"net/http"
 	"strings"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/labstack/echo/v4"
+	"user-crud/config"
+	"user-crud/usecase"
+
+	"github.com/gin-gonic/gin"
 )
 
-var jwtKey = []byte("secret_key")
-
-func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		authHeader := c.Request().Header.Get("Authorization")
+func JWTMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "missing token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
+			return
 		}
 
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-
-		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
-		})
-
-		if err != nil || !token.Valid {
-			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "invalid token"})
+		claims, err := usecase.ValidateToken(tokenStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
 		}
 
-		return next(c)
+		// گذاشتن اطلاعات کاربر در context برای دسترسی بعدی
+		c.Set("userID", claims.UserID)
+		c.Set("username", claims.Username)
+
+		c.Next()
 	}
 }
