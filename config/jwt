@@ -1,7 +1,0 @@
-package config
-
-import "time"
-
-var JWTKey = []byte("secret_key") // یکجا مرکزی
-
-const TokenExpiration = time.Hour * 24

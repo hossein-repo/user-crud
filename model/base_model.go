@@ -1,34 +1,26 @@
-// D:\Programing\projects\user-crud\model\base_model.go
 package model
 
 import (
-	"time"
+    "time"
 
-	"gorm.io/gorm"
+    "gorm.io/gorm"
 )
 
 type BaseModel struct {
-	ID        uint           `gorm:"primaryKey"`
-	CreatedAt time.Time      `gorm:"autoCreateTime"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
-	CreatedBy uint           `gorm:"not null;default:1"` // مقدار پیش‌فرض
-	UpdatedBy uint           `gorm:"not null;default:1"` // مقدار پیش‌فرض
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+    ID        uint           `gorm:"primaryKey"`
+    CreatedAt time.Time      `gorm:"autoCreateTime"`
+    UpdatedAt time.Time      `gorm:"autoUpdateTime"`
+    CreatedBy uint           `gorm:"not null;default:1"`
+    UpdatedBy uint           `gorm:"not null;default:1"`
+    DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
-// BeforeCreate hook برای تمام مدل‌ها
 func (b *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
-	if b.CreatedBy == 0 {
-		b.CreatedBy = 1
-	}
-	if b.UpdatedBy == 0 {
-		b.UpdatedBy = 1
-	}
-	return
-}
-
-// BeforeUpdate hook برای به‌روزرسانی UpdatedBy
-func (b *BaseModel) BeforeUpdate(tx *gorm.DB) (err error) {
-	// می‌تونیم UpdatedBy رو از context یا مقدار دلخواه بگیریم
-	return
+    if b.CreatedBy == 0 {
+        b.CreatedBy = 1
+    }
+    if b.UpdatedBy == 0 {
+        b.UpdatedBy = 1
+    }
+    return
 }

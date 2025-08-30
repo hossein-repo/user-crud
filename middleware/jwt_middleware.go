@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 	"strings"
-	"user-crud/config"
+
 	"user-crud/usecase"
 
 	"github.com/gin-gonic/gin"
