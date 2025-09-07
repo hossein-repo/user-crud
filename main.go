@@ -1,32 +1,66 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"user-crud/config"
 	"user-crud/infra/db"
+	"user-crud/infra/redis"
 	"user-crud/model"
 	"user-crud/router"
 	"user-crud/usecase"
+	"user-crud/validation"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
-	
+
 func initDB() {
 	err := db.InitDB()
 	if err != nil {
 		panic(err)
 	}
 
-	err = db.DB.AutoMigrate(&model.Role{}, &model.User{}, &model.UserRole{})
+	err = db.DB.AutoMigrate(&model.Role{}, &model.User{}, &model.UserRole{}, &model.OTP{})
 	if err != nil {
 		panic(err)
 	}
 }
 
+func initRedis(cfg *config.RedisConfig) {
+	err := redis.InitRedis(cfg)
+	if err != nil {
+		panic(err)
+	}
+}
 func main() {
-	r := gin.Default()
-	initDB()
+    // ✅ استفاده از کاراکترهای انگلیسی برای دیباگ
+    fmt.Println("=== STARTING APPLICATION ===\n")
+    
+    cfg := config.LoadConfig()
+    fmt.Println("=== CONFIG LOADED ===\n")
+    
+    initDB()
+    fmt.Println("=== DATABASE INITIALIZED ==\n=")
+    
+    initRedis(&cfg.Redis)
+    fmt.Println("=== REDIS INITIALIZED ===")
+    
+    r := gin.Default()
+    fmt.Println("=== GIN ENGINE CREATED ===")
 
-	// ثبت‌نام
+
+
+
+	// 🔥 مهم: ثبت validator سفارشی
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		validation.RegisterMobileValidation(v)
+	}
+
+	// OTP Routes
+	//router.RegisterOTPRoutes(r, cfg)
+
 	r.POST("/register", func(c *gin.Context) {
 		var req struct {
 			Username string `json:"username"`
@@ -91,6 +125,9 @@ func main() {
 
 	// مسیرهای Role و UserRole
 	router.RegisterRoleRoutes(r)
+
+	// OTP Routes
+	router.RegisterOTPRoutes(r, cfg)
 
 	r.Run(":8080")
 }

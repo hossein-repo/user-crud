@@ -46,12 +46,32 @@ func RegisterRoleRoutes(r *gin.Engine) {
     })
 
     roleGroup.GET("/user/:id", func(c *gin.Context) {
-        id, _ := strconv.Atoi(c.Param("id"))
+        id, err := strconv.Atoi(c.Param("id"))
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+            return
+        }
+        
         roles, err := usecase.GetUserRoles(uint(id))
         if err != nil {
             c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
             return
         }
-        c.JSON(http.StatusOK, roles)
+        
+        // ایجاد یک ساختار ساده برای پاسخ بدون فیلدهای اضافی
+        type simpleRole struct {
+            ID   uint   `json:"id"`
+            Name string `json:"name"`
+        }
+        
+        var response []simpleRole
+        for _, role := range roles {
+            response = append(response, simpleRole{
+                ID:   role.ID,
+                Name: role.Name,
+            })
+        }
+        
+        c.JSON(http.StatusOK, response)
     })
 }
